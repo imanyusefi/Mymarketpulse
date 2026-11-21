@@ -4,49 +4,388 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ترمینال مالی هوشمند</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- TradingView Lightweight Charts -->
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Vazirmatn', sans-serif; }
-        body { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: #ffffff; min-height: 100vh; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
-        .header { text-align: center; margin-bottom: 10px; }
-        .header h1 { font-size: 1.5rem; font-weight: 800; background: linear-gradient(90deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .glass-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 20px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); }
-        .card-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; color: #e2e8f0; }
-        .data-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-        .data-row:last-child { border-bottom: none; }
-        .data-label { display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 0.95rem; }
-        .data-value { font-weight: bold; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
-        .value-green { color: #4ade80; }
-        .value-red { color: #f87171; }
-        .value-blue { color: #60a5fa; }
-        .action-btn { margin-top: auto; background: linear-gradient(90deg, #3b82f6, #8b5cf6); color: white; border: none; padding: 15px; border-radius: 15px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
-        .action-btn:active { transform: scale(0.98); }
+        body { font-family: 'Vazirmatn', sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: #fff; min-height: 100vh; overflow-x: hidden; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        #chart-container { width: 100%; height: 350px; position: relative; }
     </style>
 </head>
-<body>
-    <div class="header"><h1>💠 ترمینال مالی هوشمند</h1></div>
-    <div class="glass-card">
-        <div class="card-title"><i class="fa-solid fa-chart-line"></i> بازار فارکس</div>
-        <div class="data-row"><span class="data-label">💵 شاخص دلار (DXY)</span><span class="data-value value-blue">104.25</span></div>
-        <div class="data-row"><span class="data-label">🇪🇺 یورو / دلار</span><span class="data-value value-green">1.0980</span></div>
-        <div class="data-row"><span class="data-label">🇬🇧 پوند / دلار</span><span class="data-value value-red">1.3117</span></div>
+<body class="pb-20">
+
+    <!-- Header -->
+    <header class="text-center pt-6 pb-2">
+        <h1 class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">💠 ترمینال مالی هوشمند</h1>
+        <p class="text-xs text-gray-400 mt-1" id="update-time">در حال اتصال...</p>
+    </header>
+
+    <!-- ================= TAB 1: DASHBOARD ================= -->
+    <div id="tab-dashboard" class="tab-content active px-4 space-y-4">
+        <!-- Crypto & Macro Grid -->
+        <div class="grid grid-cols-2 gap-3">
+            <div class="glass p-3 flex flex-col justify-between">
+                <span class="text-xs text-gray-400"><i class="fa-brands fa-bitcoin text-orange-400"></i> بیت‌کوین</span>
+                <span class="text-sm font-bold mt-1" id="dash-btc">...</span>
+            </div>
+            <div class="glass p-3 flex flex-col justify-between">
+                <span class="text-xs text-gray-400"><i class="fa-solid fa-euro-sign text-blue-400"></i> EUR/USD</span>
+                <span class="text-sm font-bold mt-1" id="dash-eur">...</span>
+            </div>
+            <div class="glass p-3 flex flex-col justify-between">
+                <span class="text-xs text-gray-400"><i class="fa-solid fa-coins text-yellow-400"></i> انس طلا</span>
+                <span class="text-sm font-bold mt-1" id="dash-gold">...</span>
+            </div>
+            <div class="glass p-3 flex flex-col justify-between">
+                <span class="text-xs text-gray-400"><i class="fa-solid fa-chart-line text-green-400"></i> شاخص دلار</span>
+                <span class="text-sm font-bold mt-1" id="dash-dxy">...</span>
+            </div>
+        </div>
+
+        <!-- Fear & Greed -->
+        <div class="glass p-4 flex items-center justify-between">
+            <div>
+                <span class="text-sm font-bold"><i class="fa-solid fa-face-smile text-purple-400"></i> ترس و طمع</span>
+                <p class="text-xs text-gray-400 mt-1">احساسات بازار کریپتو</p>
+            </div>
+            <div class="text-center">
+                <span class="block text-lg font-bold" id="dash-fng-val">...</span>
+                <span class="text-xs" id="dash-fng-text">...</span>
+            </div>
+        </div>
+
+        <!-- Money Flow (Gainers) -->
+        <div class="glass p-4">
+            <h3 class="text-sm font-bold mb-3 border-b border-gray-700 pb-2"><i class="fa-solid fa-fire text-red-500"></i> بیشترین رشد (۲۴ ساعت)</h3>
+            <div id="dash-gainers" class="space-y-2 text-sm">
+                <div class="text-gray-400 text-xs">در حال دریافت...</div>
+            </div>
+        </div>
     </div>
-    <div class="glass-card">
-        <div class="card-title"><i class="fa-brands fa-bitcoin"></i> بازار کریپتو</div>
-        <div class="data-row"><span class="data-label">💰 ارزش کل بازار</span><span class="data-value">$2,028.90B</span></div>
-        <div class="data-row"><span class="data-label">👑 دامیننس بیت‌کوین</span><span class="data-value value-green">57.47%</span></div>
+
+    <!-- ================= TAB 2: CHARTS ================= -->
+    <div id="tab-charts" class="tab-content px-4 space-y-4">
+        <!-- Asset Selector -->
+        <div class="flex overflow-x-auto hide-scrollbar gap-2 pb-2">
+            <button onclick="loadChart('BTCUSDT', 'binance')" class="glass px-4 py-2 text-xs whitespace-nowrap active-btn">BTC/USDT</button>
+            <button onclick="loadChart('EURUSD=X', 'yahoo')" class="glass px-4 py-2 text-xs whitespace-nowrap">EUR/USD</button>
+            <button onclick="loadChart('GC=F', 'yahoo')" class="glass px-4 py-2 text-xs whitespace-nowrap">انس طلا</button>
+            <button onclick="loadChart('ETHUSDT', 'binance')" class="glass px-4 py-2 text-xs whitespace-nowrap">ETH/USDT</button>
+        </div>
+
+        <!-- Chart Container -->
+        <div class="glass p-2 relative">
+            <div id="chart-container"></div>
+            <div id="chart-loading" class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-16 text-sm hidden">در حال بارگذاری چارت...</div>
+        </div>
+        
+        <div class="glass p-4">
+            <h3 class="text-sm font-bold mb-2">اندیکاتورها</h3>
+            <div class="flex gap-2">
+                <span class="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">MA (20) فعال</span>
+            </div>
+        </div>
     </div>
-    <div class="glass-card">
-        <div class="card-title"><i class="fa-solid fa-face-smile"></i> شاخص ترس و طمع</div>
-        <div class="data-row"><span class="data-label">وضعیت بازار</span><span class="data-value value-red">ترس شدید (12)</span></div>
+
+    <!-- ================= TAB 3: NEWS ================= -->
+    <div id="tab-news" class="tab-content px-4 space-y-4">
+        <div class="flex gap-2 mb-2">
+            <button onclick="loadNews('crypto')" class="bg-blue-600/50 border border-blue-500 px-4 py-1 rounded-full text-xs">کریپتو</button>
+            <button onclick="loadNews('forex')" class="glass px-4 py-1 rounded-full text-xs">فارکس</button>
+        </div>
+        <div id="news-container" class="space-y-3">
+            <div class="text-center text-gray-400 text-sm py-4">در حال دریافت اخبار...</div>
+        </div>
     </div>
-    <button class="action-btn">🔄 به‌روزرسانی داده‌ها</button>
+
+    <!-- ================= TAB 4: CALENDAR ================= -->
+    <div id="tab-calendar" class="tab-content px-4 space-y-3">
+        <h2 class="text-sm font-bold text-gray-300 mb-2">تقویم اقتصادی (فارکس فکتوری)</h2>
+        <div id="calendar-container" class="space-y-2">
+            <div class="text-center text-gray-400 text-sm py-4">در حال دریافت تقویم...</div>
+        </div>
+    </div>
+
+    <!-- ================= BOTTOM NAVIGATION ================= -->
+    <nav class="fixed bottom-0 left-0 w-full glass border-t border-gray-700 flex justify-around py-3 z-50 rounded-t-2xl">
+        <button onclick="switchTab('dashboard')" class="nav-btn text-blue-400 flex flex-col items-center gap-1" id="nav-dashboard">
+            <i class="fa-solid fa-chart-pie text-lg"></i><span class="text-[10px]">داشبورد</span>
+        </button>
+        <button onclick="switchTab('charts')" class="nav-btn text-gray-500 flex flex-col items-center gap-1" id="nav-charts">
+            <i class="fa-solid fa-chart-line text-lg"></i><span class="text-[10px]">چارت‌ها</span>
+        </button>
+        <button onclick="switchTab('news')" class="nav-btn text-gray-500 flex flex-col items-center gap-1" id="nav-news">
+            <i class="fa-solid fa-newspaper text-lg"></i><span class="text-[10px]">اخبار</span>
+        </button>
+        <button onclick="switchTab('calendar')" class="nav-btn text-gray-500 flex flex-col items-center gap-1" id="nav-calendar">
+            <i class="fa-solid fa-calendar-days text-lg"></i><span class="text-[10px]">تقویم</span>
+        </button>
+    </nav>
+
+    <!-- Telegram & App Logic -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
+        // --- 1. Telegram Setup ---
         let tg = window.Telegram.WebApp;
         tg.expand(); 
         tg.setHeaderColor('#0f172a');
+
+        // --- 2. Tab Switching Logic ---
+        function switchTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            // Reset all nav buttons
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.replace('text-blue-400', 'text-gray-500'));
+            
+            // Show selected tab
+            document.getElementById('tab-' + tabId).classList.add('active');
+            document.getElementById('nav-' + tabId).classList.replace('text-gray-500', 'text-blue-400');
+
+            // Lazy load data based on tab
+            if(tabId === 'dashboard') fetchDashboard();
+            if(tabId === 'charts') loadChart('BTCUSDT', 'binance');
+            if(tabId === 'news') loadNews('crypto');
+            if(tabId === 'calendar') loadCalendar();
+        }
+
+        // --- 3. Helper Functions ---
+        const proxy = 'https://api.allorigins.win/raw?url=';
+        const formatNum = (num, dec = 2) => Number(num).toLocaleString('en-US', {minimumFractionDigits: dec, maximumFractionDigits: dec});
+
+        // --- 4. Dashboard Data Fetcher ---
+        async function fetchDashboard() {
+            document.getElementById('update-time').innerText = "در حال به‌روزرسانی...";
+            try {
+                // Crypto & Forex
+                const [cryptoRes, forexRes, fngRes, gainersRes, goldRes] = await Promise.allSettled([
+                    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true').then(r=>r.json()),
+                    fetch('https://open.er-api.com/v6/latest/USD').then(r=>r.json()),
+                    fetch('https://api.alternative.me/fng/').then(r=>r.json()),
+                    fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=5&page=1&sparkline=false&price_change_percentage=24h').then(r=>r.json()),
+                    fetch('https://api.gold-api.com/price/XAU').then(r=>r.json())
+                ]);
+
+                // Process Crypto
+                if(cryptoRes.status === 'fulfilled') {
+                    const btc = cryptoRes.value.bitcoin;
+                    let color = btc.usd_24h_change > 0 ? 'text-green-400' : 'text-red-400';
+                    document.getElementById('dash-btc').innerHTML = `$${formatNum(btc.usd)} <span class="${color} text-xs">${btc.usd_24h_change.toFixed(1)}%</span>`;
+                }
+
+                // Process Forex
+                if(forexRes.status === 'fulfilled') {
+                    document.getElementById('dash-eur').innerText = (1 / forexRes.value.rates.EUR).toFixed(4);
+                }
+
+                // Process Gold
+                if(goldRes.status === 'fulfilled') {
+                    document.getElementById('dash-gold').innerText = `$${formatNum(goldRes.value.price)}`;
+                }
+
+                // Process Fear & Greed
+                if(fngRes.status === 'fulfilled') {
+                    const val = fngRes.value.data[0].value;
+                    const textMap = {"Extreme Fear": "ترس شدید", "Fear": "ترس", "Neutral": "خنثی", "Greed": "طمع", "Extreme Greed": "طمع شدید"};
+                    document.getElementById('dash-fng-val').innerText = val;
+                    document.getElementById('dash-fng-text').innerText = textMap[fngRes.value.data[0].value_classification];
+                    document.getElementById('dash-fng-val').className = val > 60 ? 'block text-lg font-bold text-green-400' : (val < 40 ? 'block text-lg font-bold text-red-400' : 'block text-lg font-bold text-yellow-400');
+                }
+
+                // Process Gainers
+                if(gainersRes.status === 'fulfilled') {
+                    let html = '';
+                    gainersRes.value.forEach(coin => {
+                        let change = coin.price_change_percentage_24h || 0;
+                        let color = change > 0 ? 'text-green-400' : 'text-red-400';
+                        html += `<div class="flex justify-between items-center border-b border-gray-800 pb-1">
+                                    <span class="text-xs">${coin.symbol.toUpperCase()}</span>
+                                    <span class="text-xs font-bold ${color}">${change > 0 ? '+' : ''}${change.toFixed(2)}%</span>
+                                 </div>`;
+                    });
+                    document.getElementById('dash-gainers').innerHTML = html;
+                }
+
+                document.getElementById('update-time').innerText = "آخرین بروزرسانی: " + new Date().toLocaleTimeString('fa-IR');
+            } catch (e) {
+                console.error("Dashboard Error", e);
+            }
+        }
+
+        // --- 5. Charts Logic ---
+        let chart, candleSeries, maSeries;
+        
+        function initChart() {
+            if (chart) { chart.remove(); }
+            const container = document.getElementById('chart-container');
+            chart = LightweightCharts.createChart(container, {
+                layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#94a3b8' },
+                grid: { vertLines: { color: 'rgba(255, 255, 255, 0.05)' }, horzLines: { color: 'rgba(255, 255, 255, 0.05)' } },
+                rightPriceScale: { borderColor: 'rgba(255, 255, 255, 0.1)' },
+                timeScale: { borderColor: 'rgba(255, 255, 255, 0.1)', timeVisible: true },
+                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+            });
+
+            candleSeries = chart.addCandlestickSeries({
+                upColor: '#4ade80', downColor: '#f87171', borderVisible: false,
+                wickUpColor: '#4ade80', wickDownColor: '#f87171',
+            });
+
+            maSeries = chart.addLineSeries({ color: '#eab308', lineWidth: 2, title: 'MA20' });
+
+            // Resize observer for mobile
+            new ResizeObserver(entries => {
+                if (entries.length === 0 || entries[0].target.clientWidth === 0) return;
+                chart.applyOptions({ width: entries[0].target.clientWidth });
+            }).observe(container);
+        }
+
+        async function loadChart(symbol, type) {
+            document.getElementById('chart-loading').classList.remove('hidden');
+            initChart();
+
+            try {
+                let data = [];
+                if (type === 'binance') {
+                    const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1h&limit=100`);
+                    const json = await res.json();
+                    data = json.map(d => ({ time: d[0]/1000, open: +d[1], high: +d[2], low: +d[3], close: +d[4] }));
+                } else if (type === 'yahoo') {
+                    const res = await fetch(proxy + encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1h&range=5d`));
+                    const json = await res.json();
+                    const result = json.chart.result[0];
+                    const timestamps = result.timestamp;
+                    const quote = result.indicators.quote[0];
+                    for (let i = 0; i < timestamps.length; i++) {
+                        if (quote.open[i] !== null) {
+                            data.push({ time: timestamps[i], open: quote.open[i], high: quote.high[i], low: quote.low[i], close: quote.close[i] });
+                        }
+                    }
+                }
+
+                if(data.length > 0) {
+                    candleSeries.setData(data);
+                    
+                    // Calculate MA20
+                    let maData = [];
+                    for(let i=19; i<data.length; i++) {
+                        let sum = 0;
+                        for(let j=0; j<20; j++) { sum += data[i-j].close; }
+                        maData.push({ time: data[i].time, value: sum/20 });
+                    }
+                    maSeries.setData(maData);
+                    chart.timeScale().fitContent();
+                }
+            } catch (e) {
+                console.error("Chart Error", e);
+            } finally {
+                document.getElementById('chart-loading').classList.add('hidden');
+            }
+        }
+
+        // --- 6. News Logic ---
+        async function loadNews(type) {
+            const container = document.getElementById('news-container');
+            container.innerHTML = '<div class="text-center text-gray-400 text-sm py-4">در حال دریافت...</div>';
+            try {
+                let feeds = [];
+                if(type === 'crypto') {
+                    feeds = ['https://cointelegraph.com/rss', 'https://decrypt.co/feed'];
+                } else {
+                    feeds = ['https://www.fxstreet.com/rss/news'];
+                }
+
+                let allItems = [];
+                for (let feed of feeds) {
+                    const res = await fetch(proxy + encodeURIComponent(feed));
+                    const text = await res.text();
+                    const parser = new DOMParser();
+                    const xml = parser.parseFromString(text, "text/xml");
+                    const items = Array.from(xml.querySelectorAll("item")).slice(0, 5); // 5 per feed
+                    items.forEach(item => {
+                        allItems.push({
+                            title: item.querySelector("title").textContent,
+                            link: item.querySelector("link").textContent,
+                            pubDate: new Date(item.querySelector("pubDate").textContent)
+                        });
+                    });
+                }
+
+                // Sort by date
+                allItems.sort((a,b) => b.pubDate - a.pubDate);
+                
+                let html = '';
+                allItems.slice(0, 10).forEach(item => {
+                    html += `<a href="${item.link}" target="_blank" class="block glass p-3 mb-2 hover:bg-white/10 transition">
+                        <h4 class="text-sm font-bold leading-tight mb-1">${item.title}</h4>
+                        <span class="text-[10px] text-gray-400"><i class="fa-regular fa-clock"></i> ${item.pubDate.toLocaleTimeString('fa-IR')}</span>
+                    </a>`;
+                });
+                container.innerHTML = html || '<div class="text-gray-400 text-sm">خبری یافت نشد.</div>';
+            } catch(e) {
+                container.innerHTML = '<div class="text-red-400 text-sm">خطا در دریافت اخبار.</div>';
+            }
+        }
+
+        // --- 7. Calendar Logic (Forex Factory) ---
+        async function loadCalendar() {
+            const container = document.getElementById('calendar-container');
+            container.innerHTML = '<div class="text-center text-gray-400 text-sm py-4">در حال دریافت...</div>';
+            try {
+                const res = await fetch(proxy + encodeURIComponent('https://nfs.faireconomy.media/ff_calendar_thisweek.json'));
+                const events = await res.json();
+                
+                // Filter High/Medium and future events
+                const now = new Date();
+                let filtered = events.filter(e => ['High', 'Medium'].includes(e.impact) && new Date(e.date) >= now).slice(0, 15);
+
+                if(filtered.length === 0) {
+                    container.innerHTML = '<div class="text-gray-400 text-sm">خبر مهمی در پیش نیست.</div>';
+                    return;
+                }
+
+                let html = '';
+                filtered.forEach(ev => {
+                    const time = new Date(ev.date).toLocaleTimeString('fa-IR', {hour: '2-digit', minute:'2-digit'});
+                    const color = ev.impact === 'High' ? 'border-red-500' : 'border-orange-500';
+                    const flag = ev.country === 'USD' ? '🇺🇸' : ev.country === 'EUR' ? '🇪🇺' : ev.country === 'GBP' ? '🇬🇧' : ev.country === 'JPY' ? '🇯🇵' : '🌐';
+                    
+                    html += `<div class="glass p-3 border-r-4 ${color} mb-2">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-bold">${flag} ${ev.country}</span>
+                            <span class="text-xs text-gray-400">${time}</span>
+                        </div>
+                        <div class="text-sm font-bold">${ev.title}</div>
+                        <div class="flex gap-4 mt-2 text-[10px] text-gray-400">
+                            <span>پیش‌بینی: <b class="text-white">${ev.forecast || '-'}</b></span>
+                            <span>قبلی: <b class="text-white">${ev.previous || '-'}</b></span>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            } catch(e) {
+                container.innerHTML = '<div class="text-red-400 text-sm">خطا در دریافت تقویم.</div>';
+            }
+        }
+
+        // --- 8. Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchDashboard();
+            
+            // Auto-refresh dashboard every 60s if on dashboard tab
+            setInterval(() => {
+                if(document.getElementById('tab-dashboard').classList.contains('active')) {
+                    fetchDashboard();
+                }
+            }, 60000);
+        });
     </script>
 </body>
 </html>
